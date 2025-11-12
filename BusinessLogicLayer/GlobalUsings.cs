@@ -1,0 +1,12 @@
+﻿global using Microsoft.Extensions.Configuration;
+global using Microsoft.Extensions.DependencyInjection;
+global using BusinessLogicLayer.DTO;
+global using MongoDB.Driver;
+global using FluentValidation;
+global using BusinessLogicLayer.Validation;
+global using AutoMapper;
+global using DataAccessLayer.Entities;
+global using BusinessLogicLayer.Mapper;
+global using BusinessLogicLayer.Service.Interface;
+global using DataAccessLayer.Repository.Interface;
+global using BusinessLogicLayer.Service;
