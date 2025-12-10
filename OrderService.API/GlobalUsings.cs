@@ -6,4 +6,5 @@ global using MongoDB.Driver;
 global using BusinessLogicLayer;
 global using DataAccessLayer;
 global using FluentValidation.AspNetCore;
+global using BusinessLogicLayer.HttpClient;
 

@@ -43,6 +43,11 @@ public class OrderRepository : IOrderRepository
 
     public async Task<Order> UpdateOrderAsync(Order order)
     {
+        FilterDefinition<Order> filter = Builders<Order>.Filter.Eq(o => o.OrderID, order.OrderID);
+        Order existingOrder = await (await _orderCollection.FindAsync(filter)).FirstOrDefaultAsync();
+
+        order._id = existingOrder._id;
+
         var result = await _orderCollection.ReplaceOneAsync(o => o.OrderID == order.OrderID, order);
 
         if (result.MatchedCount == 0)

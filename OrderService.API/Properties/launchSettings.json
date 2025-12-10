@@ -6,10 +6,16 @@
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
         "MONGO_HOST": "localhost",
-        "MONGO_PORT": "27017"
+        "MONGO_PORT": "27017",
+        "MONGODB_DATABASE": "OrdersDatabase",
+        "UsersMicroserviceName": "localhost",
+        "UsersMicroservicePort": "8181",
+        "ProductMicroserviceName": "localhost",
+        "ProductMicroservicePort": "8080"
       },
       "dotnetRunMessages": true,
-      "applicationUrl": "http://localhost:5171"
+      "applicationUrl": "http://localhost:5171",
+      "launchUrl": "swagger"
     },
     "https": {
       "commandName": "Project",
@@ -17,7 +23,12 @@
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
         "MONGO_HOST": "localhost",
-        "MONGO_PORT": "27017"
+        "MONGO_PORT": "27017",
+        "MONGODB_DATABASE": "OrdersDatabase",
+        "UsersMicroserviceName": "localhost",
+        "UsersMicroservicePort": "8181",
+        "ProductMicroserviceName": "localhost",
+        "ProductMicroservicePort": "8080"
       },
       "dotnetRunMessages": true,
       "applicationUrl": "https://localhost:7150;http://localhost:5171"
@@ -26,7 +37,11 @@
       "commandName": "IISExpress",
       "launchBrowser": true,
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "UsersMicroserviceName": "localhost",
+        "UsersMicroservicePort": "8181",
+        "ProductMicroserviceName": "localhost",
+        "ProductMicroservicePort": "8080"
       }
     },
     "Container (Dockerfile)": {
@@ -35,7 +50,11 @@
       "launchUrl": "{Scheme}://{ServiceHost}:{ServicePort}",
       "environmentVariables": {
         "ASPNETCORE_HTTPS_PORTS": "8081",
-        "ASPNETCORE_HTTP_PORTS": "8080"
+        "ASPNETCORE_HTTP_PORTS": "8080",
+        "UsersMicroserviceName": "localhost",
+        "UsersMicroservicePort": "8181",
+        "ProductMicroserviceName": "localhost",
+        "ProductMicroservicePort": "8080"
       },
       "publishAllPorts": true,
       "useSSL": true

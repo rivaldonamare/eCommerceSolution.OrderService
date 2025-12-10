@@ -10,3 +10,5 @@ global using BusinessLogicLayer.Mapper;
 global using BusinessLogicLayer.Service.Interface;
 global using DataAccessLayer.Repository.Interface;
 global using BusinessLogicLayer.Service;
+global using System.Net.Http.Json;
+global using BusinessLogicLayer.HttpClient;

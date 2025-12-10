@@ -1,6 +1,4 @@
-﻿using System.Globalization;
-
-namespace OrderService.API.Controller;
+﻿namespace OrderService.API.Controller;
 
 [Route("api/v1/[controller]")] // api/v1/orders
 [ApiController]
@@ -21,7 +19,7 @@ public class OrdersController : ControllerBase
     }
 
     [HttpGet]
-    [Route("user/{userId}")]
+    [Route("search/user/{userId}")]
     public async Task<IActionResult> GetOrdersByUserId(Guid userId)
     {
         var filter = Builders<Order>.Filter.Eq(o => o.UserID, userId);
@@ -30,75 +28,29 @@ public class OrdersController : ControllerBase
     }
 
     [HttpGet]
-    [Route("filter")]
-    public async Task<IActionResult> GetOrdersWithCondition([FromQuery] CollectionType collectionType, [FromQuery] string field, [FromQuery] string value)
+    [Route("search/orderDate/{orderDate}")]
+    public async Task<IActionResult> GetOrdersByOrderDate(DateTime orderDate)
     {
-        if (string.IsNullOrWhiteSpace(field) || string.IsNullOrWhiteSpace(value))
-        {
-            return BadRequest("Both 'field' and 'value' query parameters are required.");
-        }
+        // Match orders whose OrderDate falls on the specified date (inclusive of start, exclusive of next day)
+        var startOfDay = orderDate.Date;
+        var startOfNextDay = startOfDay.AddDays(1);
 
-        // Determine expected type by field name and attempt to parse the value
-        object parsedValue = value!; // fallback to string
-        bool parseAttempted = false;
+        var filter = Builders<Order>.Filter.And(
+            Builders<Order>.Filter.Gte(o => o.OrderDate, startOfDay),
+            Builders<Order>.Filter.Lt(o => o.OrderDate, startOfNextDay)
+        );
 
-        if (string.Equals(field, "OrderID", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(field, "UserID", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(field, "ProductID", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(field, "_id", StringComparison.OrdinalIgnoreCase))
-        {
-            parseAttempted = true;
-            if (!Guid.TryParse(value, out var guidVal))
-            {
-                return BadRequest($"Value '{value}' is not a valid GUID for field '{field}'.");
-            }
-            parsedValue = guidVal;
-        }
-        else if (string.Equals(field, "Quantity", StringComparison.OrdinalIgnoreCase))
-        {
-            parseAttempted = true;
-            if (!int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var intVal))
-            {
-                return BadRequest($"Value '{value}' is not a valid integer for field '{field}'.");
-            }
-            parsedValue = intVal;
-        }
-        else if (string.Equals(field, "UnitPrice", StringComparison.OrdinalIgnoreCase) ||
-                 string.Equals(field, "TotalPrice", StringComparison.OrdinalIgnoreCase) ||
-                 string.Equals(field, "TotalBill", StringComparison.OrdinalIgnoreCase))
-        {
-            parseAttempted = true;
-            if (!decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out var decVal))
-            {
-                return BadRequest($"Value '{value}' is not a valid decimal for field '{field}'.");
-            }
-            parsedValue = decVal;
-        }
-        else if (string.Equals(field, "OrderDate", StringComparison.OrdinalIgnoreCase))
-        {
-            parseAttempted = true;
-            if (!DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var dtVal))
-            {
-                return BadRequest($"Value '{value}' is not a valid DateTime for field '{field}'.");
-            }
-            parsedValue = dtVal;
-        }
+        var orders = await _orderService.GetOrdersWithConditionAsync(filter);
+        return Ok(orders);
+    }
 
-        // Build filter for Order or for nested OrderItem
-        FilterDefinition<Order> filter;
-
-        if (collectionType == CollectionType.Order)
-        {
-            // Use field name as-is; Mongo driver will map to BSON element names
-            filter = Builders<Order>.Filter.Eq(field, parsedValue);
-        }
-        else // CollectionType.OrderItem
-        {
-            // Build a filter for matching items inside the order
-            var itemFilter = Builders<OrderItem>.Filter.Eq(field, parsedValue);
-            filter = Builders<Order>.Filter.ElemMatch(o => o.Items, itemFilter);
-        }
-
+    [HttpGet]
+    [Route("search/productID/{productId}")]
+    public async Task<IActionResult> GetOrdersByProductId(Guid productId)
+    {
+        // Build a filter that matches orders which have at least one item with the specified ProductID
+        var itemFilter = Builders<OrderItem>.Filter.Eq(i => i.ProductID, productId);
+        var filter = Builders<Order>.Filter.ElemMatch(o => o.Items, itemFilter);
         var orders = await _orderService.GetOrdersWithConditionAsync(filter);
         return Ok(orders);
     }

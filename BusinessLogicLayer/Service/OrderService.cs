@@ -8,11 +8,15 @@ public class OrderService : IOrderService
     private readonly IValidator<CreateOrderItemRequest> _createOrderItemRequestValidator;
     private readonly IValidator<UpdateOrderRequest> _updateOrderRequestValidator;
     private readonly IValidator<UpdateOrderItemRequest> _updateOrderItemRequestValidator;
+    private readonly UserServiceClient _userServiceClient;
+    private readonly ProductServiceClient _productServiceClient;
 
     public OrderService(IOrderRepository orderRepository, IMapper mapper, IValidator<CreateOrderRequest> createOrderRequestValidator, 
         IValidator<CreateOrderItemRequest> createOrderItemRequestValidator, 
         IValidator<UpdateOrderRequest> updateOrderRequestValidator, 
-        IValidator<UpdateOrderItemRequest> updateOrderItemRequestValidator)
+        IValidator<UpdateOrderItemRequest> updateOrderItemRequestValidator,
+        UserServiceClient userServiceClient,
+        ProductServiceClient productServiceClient)
     {
         _orderRepository = orderRepository ?? throw new ArgumentNullException(nameof(orderRepository));
         _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
@@ -20,6 +24,8 @@ public class OrderService : IOrderService
         _createOrderItemRequestValidator = createOrderItemRequestValidator ?? throw new ArgumentNullException(nameof(createOrderItemRequestValidator));
         _updateOrderRequestValidator = updateOrderRequestValidator ?? throw new ArgumentNullException(nameof(updateOrderRequestValidator));
         _updateOrderItemRequestValidator = updateOrderItemRequestValidator ?? throw new ArgumentNullException(nameof(updateOrderItemRequestValidator));
+        _userServiceClient = userServiceClient ?? throw new ArgumentNullException(nameof(userServiceClient));
+        _productServiceClient = productServiceClient ?? throw new ArgumentNullException(nameof(productServiceClient));
     }
 
     public async Task<OrderResponse> CreateOrderAsync(CreateOrderRequest request)
@@ -37,9 +43,21 @@ public class OrderService : IOrderService
         // map request to entity
         var orderEntity = _mapper.Map<Order>(request);
 
+        // check if user exists
+        var user = await _userServiceClient.GetUserByUserID(orderEntity.UserID);
+
+        if (user is null) throw new Exception("User not found.");
+
         // calculate total price for each item and total bill
         foreach (var item in orderEntity.Items)
         {
+            // check if product exists
+            var product = await _productServiceClient.GetProductByProductID(item.ProductID);
+
+            if (product is null) throw new Exception("Product not found.");
+
+            item.UnitPrice = product.UnitPrice;
+
             item.TotalPrice = item.Quantity * item.UnitPrice;
         }
 
@@ -51,8 +69,11 @@ public class OrderService : IOrderService
         // check if order is created
         if (order is null)  throw new Exception("Failed to create order.");
 
-        // map entity to response
-        return _mapper.Map<OrderResponse>(order);
+        // map entity to response and enrich with username and product info
+        var response = _mapper.Map<OrderResponse>(order);
+        response = await EnrichOrderResponseAsync(response);
+
+        return response;
     }
 
     public async Task<bool> DeleteOrderAsync(Guid id)
@@ -76,7 +97,14 @@ public class OrderService : IOrderService
     public async Task<IEnumerable<OrderResponse>> GetAllOrdersAsync()
     {
         var orders = await _orderRepository.GetAllOrdersAsync();
-        return _mapper.Map<IEnumerable<OrderResponse>>(orders);
+        var ordersResponse = _mapper.Map<IEnumerable<OrderResponse>>(orders).ToList();
+
+        for (int i = 0; i < ordersResponse.Count; i++)
+        {
+            ordersResponse[i] = await EnrichOrderResponseAsync(ordersResponse[i]);
+        }
+
+        return ordersResponse;
     }
 
     public async Task<IEnumerable<OrderResponse>> GetOrdersByUserIdAsync(FilterDefinition<Order> filter)
@@ -84,7 +112,14 @@ public class OrderService : IOrderService
         if (filter == null) throw new ArgumentNullException(nameof(filter));
 
         var orders = await _orderRepository.GetOrdersWithConditionAsync(filter);
-        return _mapper.Map<IEnumerable<OrderResponse>>(orders).ToList();
+        var ordersResponse = _mapper.Map<IEnumerable<OrderResponse>>(orders).ToList();
+
+        for (int i = 0; i < ordersResponse.Count; i++)
+        {
+            ordersResponse[i] = await EnrichOrderResponseAsync(ordersResponse[i]);
+        }
+
+        return ordersResponse;
     }
 
     public async Task<IEnumerable<OrderResponse>> GetOrdersWithConditionAsync(FilterDefinition<Order> filter)
@@ -92,7 +127,14 @@ public class OrderService : IOrderService
         if (filter == null) throw new ArgumentNullException(nameof(filter));
 
         var orders = await _orderRepository.GetOrdersWithConditionAsync(filter);
-        return _mapper.Map<IEnumerable<OrderResponse>>(orders).ToList();
+        var ordersResponse = _mapper.Map<IEnumerable<OrderResponse>>(orders).ToList();
+
+        for (int i = 0; i < ordersResponse.Count; i++)
+        {
+            ordersResponse[i] = await EnrichOrderResponseAsync(ordersResponse[i]);
+        }
+
+        return ordersResponse;
     }
 
     public async Task<OrderResponse> UpdateOrderAsync(UpdateOrderRequest request)
@@ -107,10 +149,6 @@ public class OrderService : IOrderService
             await _updateOrderItemRequestValidator.ValidateAndThrowAsync(item);
         }
 
-        var filter = Builders<Order>.Filter.Eq(o => o.OrderID, request.OrderID);
-        var existingOrder =  await _orderRepository.GetSingleOrderAsync(filter)
-            ?? throw new ArgumentNullException("Order does not exist.");
-
         // map request to entity
         var orderEntity = _mapper.Map<Order>(request);
 
@@ -121,7 +159,16 @@ public class OrderService : IOrderService
         }
 
         orderEntity.TotalBill = orderEntity.Items.Sum(i => i.TotalPrice);
-        orderEntity._id = existingOrder!._id;
+
+        // check if user exists
+        var user = await _userServiceClient.GetUserByUserID(orderEntity.UserID);
+
+        if (user is null) throw new Exception("User not found.");
+
+        // check if product exists
+        var product = await _productServiceClient.GetProductByProductID(orderEntity.Items[0].ProductID);
+
+        if (product is null) throw new Exception("Product not found.");
 
         // update order
         var order = await _orderRepository.UpdateOrderAsync(orderEntity);
@@ -129,7 +176,68 @@ public class OrderService : IOrderService
         // check if order is updated
         if (order is null) throw new Exception("Failed to update order.");
 
-        // map entity to response
-        return _mapper.Map<OrderResponse>(order);
+        // map entity to response and enrich with username and product info
+        var response = _mapper.Map<OrderResponse>(order);
+        response = await EnrichOrderResponseAsync(response);
+
+        return response;
+    }
+
+    // helper to fetch user and product info and set UserName and update OrderItems
+    private async Task<OrderResponse> EnrichOrderResponseAsync(OrderResponse orderResponse)
+    {
+        try
+        {
+            // fetch user
+            var userTask = _userServiceClient.GetUserByUserID(orderResponse.UserID);
+
+            // fetch product details for all items in parallel
+            List<Task<ProductDTO?>> productTasks = new List<Task<ProductDTO?>>();
+            if (orderResponse.OrderItems != null)
+            {
+                foreach (var item in orderResponse.OrderItems)
+                {
+                    productTasks.Add(_productServiceClient.GetProductByProductID(item.ProductID));
+                }
+            }
+
+            var user = await userTask;
+            var products = await Task.WhenAll(productTasks);
+
+            var userName = user?.Name ?? string.Empty;
+            var email = user?.Email ?? string.Empty;
+
+            // update order items with product info
+            List<OrderItemResponse>? updatedItems = null;
+            if (orderResponse.OrderItems != null)
+            {
+                updatedItems = new List<OrderItemResponse>(orderResponse.OrderItems.Count);
+                for (int i = 0; i < orderResponse.OrderItems.Count; i++)
+                {
+                    var item = orderResponse.OrderItems[i];
+                    var product = products.Length > i ? products[i] : null;
+                    if (product != null)
+                    {
+                        var updatedItem = item with
+                        {
+                            ProductName = product.ProductName,
+                            Category = product.Category
+                        };
+                        updatedItems.Add(updatedItem);
+                    }
+                    else
+                    {
+                        updatedItems.Add(item);
+                    }
+                }
+            }
+
+            return orderResponse with { UserName = userName, Email = email, OrderItems = (updatedItems ?? orderResponse.OrderItems)! };
+        }
+        catch
+        {
+            // on any error, return original response (or with empty username)
+            return orderResponse with { UserName = orderResponse.UserName ?? string.Empty };
+        }
     }
 }

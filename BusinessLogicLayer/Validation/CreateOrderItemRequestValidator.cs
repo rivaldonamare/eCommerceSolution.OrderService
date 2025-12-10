@@ -10,9 +10,5 @@ public class CreateOrderItemRequestValidator : AbstractValidator<CreateOrderItem
         RuleFor(x => x.Quantity)
             .NotEmpty().WithErrorCode("Quantity is required.")
             .GreaterThan(0).WithErrorCode("Quantity must be greater than zero.");
-
-        RuleFor(x => x.UnitPrice)
-            .NotEmpty().WithErrorCode("Unit price is required.")
-            .GreaterThan(0).WithErrorCode("Unit price must be greater than zero.");
     }
 }

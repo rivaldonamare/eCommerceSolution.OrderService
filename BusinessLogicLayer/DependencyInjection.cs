@@ -2,7 +2,7 @@
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddBusinessLogicLayer(this IServiceCollection services)
+    public static IServiceCollection AddBusinessLogicLayer(this IServiceCollection services, IConfiguration configuration)
     {
         // Add services to the container
         services.AddAutoMapper(typeof(OrderMappingProfile).Assembly);

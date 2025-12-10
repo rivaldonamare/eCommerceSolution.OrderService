@@ -13,8 +13,6 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["OrderService.API/OrderService.API.csproj", "OrderService.API/"]
-COPY ["BusinessLogicLayer/BusinessLogicLayer.csproj", "BusinessLogicLayer/"]
-COPY ["DataAccessLayer/DataAccessLayer.csproj", "DataAccessLayer/"]
 RUN dotnet restore "./OrderService.API/OrderService.API.csproj"
 COPY . .
 WORKDIR "/src/OrderService.API"
@@ -29,11 +27,9 @@ RUN dotnet publish "./OrderService.API.csproj" -c $BUILD_CONFIGURATION -o /app/p
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
-ENV MONGODB_HOST=localhost
-ENV MONGODB_PORT=27017
-ENV MONGODB_DATABASE=OrdersDatabase
+ENV MONGO_HOST=localhost
+ENV MONGO_PORT=27017
+ENV MONGO_DATABASE=OrdersDatabase
 ENV UsersMicroserviceName=localhost
 ENV UsersMicroservicePort=8181
-ENV ProductMicroserviceName=localhost
-ENV ProductMicroservicePort=8080
 ENTRYPOINT ["dotnet", "OrderService.API.dll"]
