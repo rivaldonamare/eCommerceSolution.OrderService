@@ -3,14 +3,25 @@
 public class UserServiceClient
 {
     private readonly System.Net.Http.HttpClient _httpClient;
+    private readonly IDistributedCache _distributedCache;
 
-    public UserServiceClient(System.Net.Http.HttpClient httpClient)
+    public UserServiceClient(System.Net.Http.HttpClient httpClient, IDistributedCache distributedCache)
     {
         _httpClient = httpClient;
+        _distributedCache = distributedCache;
     }
 
     public async Task<UserDTO?> GetUserByUserID(Guid userID)
     {
+        var cachedKey = $"user:{userID}";
+        var cachedUser = await _distributedCache.GetStringAsync(cachedKey);
+
+        if (cachedUser != null)
+        {
+            var userFromCached = JsonSerializer.Deserialize<UserDTO>(cachedUser);
+            return userFromCached;
+        }
+
         HttpResponseMessage response = await _httpClient.GetAsync($"api/v1/Users/userId?userId={userID}");
 
         if (!response.IsSuccessStatusCode)
@@ -35,6 +46,14 @@ public class UserServiceClient
         {
             throw new ArgumentException("Invalid User ID");
         }
+
+        var serialized = JsonSerializer.Serialize(user);
+        var options = new DistributedCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10)
+        };
+
+        await _distributedCache.SetStringAsync(cachedKey, serialized, options);
 
         return user;
     }

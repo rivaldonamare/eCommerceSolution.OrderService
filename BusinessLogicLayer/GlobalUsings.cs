@@ -12,3 +12,5 @@ global using DataAccessLayer.Repository.Interface;
 global using BusinessLogicLayer.Service;
 global using System.Net.Http.Json;
 global using BusinessLogicLayer.HttpClient;
+global using Microsoft.Extensions.Caching.Distributed;
+global using System.Text.Json;

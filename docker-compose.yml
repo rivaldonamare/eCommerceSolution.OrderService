@@ -14,6 +14,8 @@ services:
       - ProductMicroserviceName=product-microservice
       - ProductMicroservicePort=8080
       - DOTNET_RUNNING_IN_CONTAINER=true
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     ports:
       - "7000:8080"
     networks:
@@ -94,6 +96,17 @@ services:
       - ../postgres-init:/docker-entrypoint-initdb.d
     networks:
       - users-postgres-network
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    volumes:
+      - D:\Learn\ecommerce\redis-cache:/data
+    networks:
+      - ecommerce-network
+
+    
 
 networks:
   orders-mongodb-network:
