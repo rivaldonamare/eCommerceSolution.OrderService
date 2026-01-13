@@ -1,0 +1,70 @@
+{
+  "Routes": [
+    {
+      "UpstreamPathTemplate": "/gateway/orders/{everything}",
+      "DownstreamPathTemplate": "/api/v1/orders",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "orderservice.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "OPTIONS" ],
+      "UpstreamScheme": "http",
+      "RateLimitOptions": {
+        "Limit": 3,
+        "Period": "1m",
+        "HttpStatusCode": 429,
+        "EnableRateLimiting": true,
+        "PeriodTimespan": 30
+      }
+    },
+    {
+      "UpstreamPathTemplate": "/gateway/users/{everything}",
+      "DownstreamPathTemplate": "/api/v1/users/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "users-microservice",
+          "Port": 8181
+        }
+      ],
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "OPTIONS" ],
+      "UpstreamScheme": "http",
+      "RateLimitOptions": {
+        "Limit": 3,
+        "Period": "1m",
+        "HttpStatusCode": 429,
+        "EnableRateLimiting": true,
+        "PeriodTimespan": 30
+      }
+    },
+    {
+      "UpstreamPathTemplate": "/gateway/products/{everything}",
+      "DownstreamPathTemplate": "/api/products/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "product-microservice",
+          "Port": 8080
+        }
+      ],
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "OPTIONS" ],
+      "UpstreamScheme": "http",
+      "RateLimitOptions": {
+        "Limit": 3,
+        "Period": "1m",
+        "HttpStatusCode": 429,
+        "EnableRateLimiting": true,
+        "PeriodTimespan": 30
+      }
+    }
+
+  ],
+
+
+  "GlobalConfiguration": {
+    "BaseUrl": "http://localhost:7777"
+  }
+}

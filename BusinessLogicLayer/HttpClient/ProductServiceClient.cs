@@ -22,7 +22,7 @@ public class ProductServiceClient
             return productFromCache;
         }
 
-        HttpResponseMessage response = await _httpClient.GetAsync($"/api/products/search/product-id/{productID}");
+        HttpResponseMessage response = await _httpClient.GetAsync($"/gateway/products/search/product-id/{productID}");
 
         if (!response.IsSuccessStatusCode)
         {
