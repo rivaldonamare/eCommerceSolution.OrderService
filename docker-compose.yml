@@ -16,6 +16,11 @@ services:
       - DOTNET_RUNNING_IN_CONTAINER=true
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - RabbitMQ_HostName=rabbitmq
+      - RabbitMQ_UserName=guest
+      - RabbitMQ_Password=guest
+      - RabbitMQ_Port= 5672 
+      - RabbitMQ_Products_Exchange=product.exchange
     ports:
       - "7000:8080"
     networks:
@@ -46,6 +51,11 @@ services:
       - MYSQL_DATABASE=ecommerceproductsdatabase 
       - MYSQL_USER=root
       - MYSQL_PASSWORD=admin
+      - RabbitMQ_HostName=rabbitmq
+      - RabbitMQ_UserName=guest
+      - RabbitMQ_Password=guest
+      - RabbitMQ_Port= 5672 
+      - RabbitMQ_Products_Exchange=product.exchange
     ports:
       - "6001:8080"
     networks:
@@ -75,6 +85,10 @@ services:
       - POSTGRES_PORT=5432
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
+      - RabbitMQ_HostName=rabbitmq
+      - RabbitMQ_UserName=guest
+      - RabbitMQ_Password=guest
+      - RabbitMQ_Port= 5672 
     ports:
       - "5000:8181"
     networks:
@@ -117,7 +131,16 @@ services:
     networks:
       - ecommerce-network
 
-    
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    ports: 
+     - "5672:5672"
+     - "15672:15672"
+    environment:
+     - RABBITMQ_DEFAULT_USER=guest
+     - RABBITMQ_DEFAULT_PASSWORD=guest
+    networks:
+     - ecommerce-network
 
 networks:
   orders-mongodb-network:
